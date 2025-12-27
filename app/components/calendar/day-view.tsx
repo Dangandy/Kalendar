@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Timeline } from './timeline'
@@ -8,7 +8,8 @@ import { ScheduleBlock } from './schedule-block'
 import { CreateTaskDialog } from '../forms/create-task-dialog'
 import { useKalendarStore } from '@/lib/store'
 import { formatDate, formatDisplayDate } from '@/lib/utils/time'
-import { getTasksForSchedule, shouldShowTaskOnDate, isTaskCompletedInAnySchedule } from '@/lib/utils/tasks'
+import { getTasksForSchedule } from '@/lib/utils/tasks'
+import { ensureTaskInstancesForDate } from '@/lib/utils/recurrence'
 
 export function DayView() {
   const [currentDate, setCurrentDate] = useState(new Date())
@@ -20,9 +21,23 @@ export function DayView() {
     chunkInstances,
     toggleTaskInstance,
     toggleChunkInstance,
+    addTaskInstance,
+    addChunkInstance,
   } = useKalendarStore()
 
   const dateStr = formatDate(currentDate)
+
+  // Ensure task instances exist for current date
+  useEffect(() => {
+    ensureTaskInstancesForDate(
+      dateStr,
+      tasks,
+      taskInstances,
+      addTaskInstance,
+      addChunkInstance,
+      tasks
+    )
+  }, [dateStr, tasks, taskInstances, addTaskInstance, addChunkInstance])
 
   const goToPreviousDay = () => {
     setCurrentDate((prev) => {
@@ -49,17 +64,20 @@ export function DayView() {
     a.startTime.localeCompare(b.startTime)
   )
 
-  // Get tasks for each schedule, filtering by date and completion status
+  // Get tasks for each schedule, filtering by date
   const getScheduleTasks = (scheduleId: string) => {
-    return getTasksForSchedule(tasks, scheduleId).filter((task) => {
-      // Check if task should show on this date
-      if (!shouldShowTaskOnDate(task, dateStr, taskInstances)) {
-        return false
-      }
+    const scheduleTasks = getTasksForSchedule(tasks, scheduleId)
 
-      // If completed in any schedule, only show in first schedule (for reference)
-      if (isTaskCompletedInAnySchedule(task, dateStr, taskInstances)) {
-        // Show in first matching schedule only
+    return scheduleTasks.filter((task) => {
+      // Check if there's an instance for this date
+      const instance = taskInstances.find(
+        (ti) => ti.taskId === task.id && ti.date === dateStr
+      )
+
+      if (!instance) return false
+
+      // If completed, only show in first schedule
+      if (instance.completed) {
         const firstScheduleId = task.scheduleIds.find((sid) =>
           sortedSchedules.some((s) => s.id === sid)
         )
