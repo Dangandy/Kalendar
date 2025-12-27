@@ -1,13 +1,11 @@
 import { StorageModeDialog } from './components/storage-mode-dialog'
+import { DayView } from './components/calendar/day-view'
 
 export default function Home() {
   return (
-    <main className="min-h-screen">
+    <main className="h-screen flex flex-col">
       <StorageModeDialog />
-      <div className="container mx-auto p-4">
-        <h1 className="text-2xl font-bold">Kalendar</h1>
-        {/* Calendar view will go here */}
-      </div>
+      <DayView />
     </main>
   )
 }
