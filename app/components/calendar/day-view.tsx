@@ -7,10 +7,20 @@ import { Timeline } from './timeline'
 import { ScheduleBlock } from './schedule-block'
 import { useKalendarStore } from '@/lib/store'
 import { formatDate, formatDisplayDate } from '@/lib/utils/time'
+import { getTasksForSchedule, shouldShowTaskOnDate, isTaskCompletedInAnySchedule } from '@/lib/utils/tasks'
 
 export function DayView() {
   const [currentDate, setCurrentDate] = useState(new Date())
-  const { schedules } = useKalendarStore()
+  const {
+    schedules,
+    tasks,
+    taskInstances,
+    chunkInstances,
+    toggleTaskInstance,
+    toggleChunkInstance,
+  } = useKalendarStore()
+
+  const dateStr = formatDate(currentDate)
 
   const goToPreviousDay = () => {
     setCurrentDate((prev) => {
@@ -37,6 +47,27 @@ export function DayView() {
     a.startTime.localeCompare(b.startTime)
   )
 
+  // Get tasks for each schedule, filtering by date and completion status
+  const getScheduleTasks = (scheduleId: string) => {
+    return getTasksForSchedule(tasks, scheduleId).filter((task) => {
+      // Check if task should show on this date
+      if (!shouldShowTaskOnDate(task, dateStr, taskInstances)) {
+        return false
+      }
+
+      // If completed in any schedule, only show in first schedule (for reference)
+      if (isTaskCompletedInAnySchedule(task, dateStr, taskInstances)) {
+        // Show in first matching schedule only
+        const firstScheduleId = task.scheduleIds.find((sid) =>
+          sortedSchedules.some((s) => s.id === sid)
+        )
+        return scheduleId === firstScheduleId
+      }
+
+      return true
+    })
+  }
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -61,9 +92,16 @@ export function DayView() {
       {/* Timeline */}
       <Timeline>
         {sortedSchedules.map((schedule) => (
-          <ScheduleBlock key={schedule.id} schedule={schedule}>
-            {/* Tasks will go here */}
-          </ScheduleBlock>
+          <ScheduleBlock
+            key={schedule.id}
+            schedule={schedule}
+            tasks={getScheduleTasks(schedule.id)}
+            allTasks={tasks}
+            taskInstances={taskInstances.filter((ti) => ti.date === dateStr)}
+            chunkInstances={chunkInstances}
+            onToggleTask={toggleTaskInstance}
+            onToggleChunk={toggleChunkInstance}
+          />
         ))}
       </Timeline>
     </div>
