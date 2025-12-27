@@ -5,12 +5,14 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Timeline } from './timeline'
 import { ScheduleBlock } from './schedule-block'
+import { CreateTaskDialog } from '../forms/create-task-dialog'
 import { useKalendarStore } from '@/lib/store'
 import { formatDate, formatDisplayDate } from '@/lib/utils/time'
 import { getTasksForSchedule, shouldShowTaskOnDate, isTaskCompletedInAnySchedule } from '@/lib/utils/tasks'
 
 export function DayView() {
   const [currentDate, setCurrentDate] = useState(new Date())
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const {
     schedules,
     tasks,
@@ -86,7 +88,11 @@ export function DayView() {
         <h2 className="text-xl font-semibold">
           {formatDisplayDate(currentDate)}
         </h2>
-        <div className="w-[140px]" /> {/* Spacer for centering */}
+        <CreateTaskDialog
+          date={dateStr}
+          open={createDialogOpen}
+          onOpenChange={setCreateDialogOpen}
+        />
       </div>
 
       {/* Timeline */}
