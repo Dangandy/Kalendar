@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useKalendarStore } from '@/lib/store'
-import type { Priority, Recurrence, Task, TaskInstance } from '@/lib/store/types'
+import type { Priority, Recurrence, Task, TaskInstance, ChunkInstance } from '@/lib/store/types'
 
 interface CreateTaskFormProps {
   date: string
@@ -22,7 +22,7 @@ interface CreateTaskFormProps {
 }
 
 export function CreateTaskForm({ date, onSuccess }: CreateTaskFormProps) {
-  const { schedules, addTask, addTaskInstance } = useKalendarStore()
+  const { schedules, addTask, addTaskInstance, addChunkInstance } = useKalendarStore()
 
   const [title, setTitle] = useState('')
   const [priority, setPriority] = useState<Priority>(4)
@@ -76,10 +76,23 @@ export function CreateTaskForm({ date, onSuccess }: CreateTaskFormProps) {
 
     addTask(task)
 
-    // Create chunks
+    // Create task instance for the selected date
+    const instanceId = uuidv4()
+    const instance: TaskInstance = {
+      id: instanceId,
+      taskId,
+      date,
+      completed: false,
+      completedAt: null,
+    }
+
+    addTaskInstance(instance)
+
+    // Create chunks and their instances
     chunks.forEach((chunkTitle) => {
+      const chunkId = uuidv4()
       const chunk: Task = {
-        id: uuidv4(),
+        id: chunkId,
         title: chunkTitle,
         description: null,
         priority: 4,
@@ -91,18 +104,17 @@ export function CreateTaskForm({ date, onSuccess }: CreateTaskFormProps) {
         updatedAt: now,
       }
       addTask(chunk)
+
+      // Create chunk instance for this task instance
+      const chunkInstance: ChunkInstance = {
+        id: uuidv4(),
+        taskInstanceId: instanceId,
+        chunkId,
+        completed: false,
+        completedAt: null,
+      }
+      addChunkInstance(chunkInstance)
     })
-
-    // Create task instance for today
-    const instance: TaskInstance = {
-      id: uuidv4(),
-      taskId,
-      date,
-      completed: false,
-      completedAt: null,
-    }
-
-    addTaskInstance(instance)
 
     onSuccess()
   }

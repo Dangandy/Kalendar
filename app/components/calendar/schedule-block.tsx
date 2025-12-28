@@ -49,9 +49,10 @@ export function ScheduleBlock({
         {tasks.map((task) => {
           const instance = taskInstances.find((ti) => ti.taskId === task.id)
           const chunks = allTasks.filter((t) => t.parentId === task.id)
-          const taskChunkInstances = chunkInstances.filter(
-            (ci) => chunks.some((c) => c.id === ci.chunkId)
-          )
+          // Filter chunk instances by task instance ID to get the right ones for this date
+          const taskChunkInstances = instance
+            ? chunkInstances.filter((ci) => ci.taskInstanceId === instance.id)
+            : []
 
           return (
             <TaskItem
