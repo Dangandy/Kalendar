@@ -5,6 +5,7 @@ import { ChevronDown, ChevronRight } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
+import { formatTimeDisplay } from '@/lib/utils/time'
 import { ChunkItem } from './chunk-item'
 import type { Task, TaskInstance, ChunkInstance } from '@/lib/store/types'
 
@@ -63,6 +64,11 @@ export function TaskItem({
           )}
         >
           {task.title}
+          {(instance?.startTime || task.startTime) && (
+            <span className="ml-2 text-xs text-muted-foreground">
+              @ {formatTimeDisplay(instance?.startTime || task.startTime!)}
+            </span>
+          )}
         </span>
         <Badge
           variant="secondary"
@@ -71,6 +77,12 @@ export function TaskItem({
           P{task.priority}
         </Badge>
       </div>
+
+      {task.description && (
+        <p className="mt-1 ml-6 text-xs text-muted-foreground">
+          {task.description}
+        </p>
+      )}
 
       {expanded && hasChunks && (
         <div className="mt-2 space-y-1">
