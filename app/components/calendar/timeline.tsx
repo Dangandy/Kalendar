@@ -1,7 +1,7 @@
 'use client'
 
 import { getTimelineHours, formatTime } from '@/lib/utils/time'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 interface TimelineProps {
   children: React.ReactNode
@@ -10,6 +10,9 @@ interface TimelineProps {
 export function Timeline({ children }: TimelineProps) {
   const hours = getTimelineHours()
   const hourHeight = 60 // pixels per hour
+
+  const containerRef = useRef<HTMLDivElement>(null)
+  const hasScrolled = useRef(false)
 
   const [currentTime, setCurrentTime] = useState<Date | null>(null)
 
@@ -33,8 +36,17 @@ export function Timeline({ children }: TimelineProps) {
 
   const timePosition = getCurrentTimePosition()
 
+  useEffect(() => {
+    if (timePosition !== null && containerRef.current && !hasScrolled.current) {
+      // Scroll to show current time in the upper portion of the view
+      const scrollPosition = Math.max(0, timePosition - 100)
+      containerRef.current.scrollTop = scrollPosition
+      hasScrolled.current = true
+    }
+  }, [timePosition])
+
   return (
-    <div className="flex flex-1 overflow-auto">
+    <div ref={containerRef} className="flex flex-1 overflow-auto">
       {/* Time labels */}
       <div className="flex-shrink-0 w-20 border-r">
         {hours.map((hour) => (
