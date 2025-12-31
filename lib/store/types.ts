@@ -25,6 +25,7 @@ export interface Task {
   recurrence: Recurrence
   recurrenceEnd: string | null // ISO date
   parentId: string | null // null for top-level tasks, task id for chunks
+  startTime: string | null // HH:MM format - scheduled start time
   createdAt: string
   updatedAt: string
 }
@@ -35,6 +36,16 @@ export interface TaskInstance {
   date: string // ISO date (YYYY-MM-DD)
   completed: boolean
   completedAt: string | null
+  startTime?: string | null // HH:MM format for linked tasks
+  triggeredByLinkId?: string | null // Which TaskLink created this instance
+}
+
+export interface TaskLink {
+  id: string
+  triggerTaskId: string // Task that triggers when completed
+  linkedTaskId: string // Task to be scheduled
+  delayMinutes: number // Minutes after completion
+  createdAt: string
 }
 
 export interface ChunkInstance {

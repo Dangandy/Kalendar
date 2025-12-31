@@ -14,7 +14,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useKalendarStore } from '@/lib/store'
-import type { Priority, Recurrence, Task, TaskInstance, ChunkInstance } from '@/lib/store/types'
+import { TaskLinkSelector } from './task-link-selector'
+import type { Priority, Recurrence, Task, TaskInstance, TaskLink, ChunkInstance } from '@/lib/store/types'
 
 interface CreateTaskFormProps {
   date: string
@@ -22,14 +23,32 @@ interface CreateTaskFormProps {
 }
 
 export function CreateTaskForm({ date, onSuccess }: CreateTaskFormProps) {
-  const { schedules, addTask, addTaskInstance, addChunkInstance } = useKalendarStore()
+  const { schedules, tasks, addTask, addTaskInstance, addChunkInstance, addTaskLink } = useKalendarStore()
 
   const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
   const [priority, setPriority] = useState<Priority>(4)
   const [selectedScheduleIds, setSelectedScheduleIds] = useState<string[]>([])
   const [recurrence, setRecurrence] = useState<Recurrence>('none')
   const [chunks, setChunks] = useState<string[]>([])
   const [newChunk, setNewChunk] = useState('')
+  const [linkConfig, setLinkConfig] = useState<{
+    triggerTaskId: string
+    delayMinutes: number
+  } | null>(null)
+
+  // Only show top-level tasks (not chunks) as linkable
+  const availableTasks = tasks.filter((t) => t.parentId === null)
+
+  const handleLinkConfigChange = (config: typeof linkConfig) => {
+    setLinkConfig(config)
+    // Reset recurrence and schedules when link is configured
+    // Linked tasks inherit trigger's recurrence and use startTime instead of schedules
+    if (config) {
+      setRecurrence('none')
+      setSelectedScheduleIds([])
+    }
+  }
 
   const handleScheduleToggle = (scheduleId: string, checked: boolean) => {
     if (checked) {
@@ -53,7 +72,8 @@ export function CreateTaskForm({ date, onSuccess }: CreateTaskFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!title.trim() || selectedScheduleIds.length === 0) {
+    // Require schedules only for non-linked tasks
+    if (!title.trim() || (!linkConfig && selectedScheduleIds.length === 0)) {
       return
     }
 
@@ -64,31 +84,20 @@ export function CreateTaskForm({ date, onSuccess }: CreateTaskFormProps) {
     const task: Task = {
       id: taskId,
       title: title.trim(),
-      description: null,
+      description: description.trim() || null,
       priority,
       scheduleIds: selectedScheduleIds,
       recurrence,
       recurrenceEnd: null,
       parentId: null,
+      startTime: null, // Will add UI in next task
       createdAt: now,
       updatedAt: now,
     }
 
     addTask(task)
 
-    // Create task instance for the selected date
-    const instanceId = uuidv4()
-    const instance: TaskInstance = {
-      id: instanceId,
-      taskId,
-      date,
-      completed: false,
-      completedAt: null,
-    }
-
-    addTaskInstance(instance)
-
-    // Create chunks and their instances
+    // Create chunks (always, they're part of the task template)
     chunks.forEach((chunkTitle) => {
       const chunkId = uuidv4()
       const chunk: Task = {
@@ -100,21 +109,51 @@ export function CreateTaskForm({ date, onSuccess }: CreateTaskFormProps) {
         recurrence: 'none',
         recurrenceEnd: null,
         parentId: taskId,
+        startTime: null,
         createdAt: now,
         updatedAt: now,
       }
       addTask(chunk)
+    })
 
-      // Create chunk instance for this task instance
-      const chunkInstance: ChunkInstance = {
+    if (linkConfig) {
+      // For linked tasks: only create the link, instance is created when trigger completes
+      const link: TaskLink = {
         id: uuidv4(),
-        taskInstanceId: instanceId,
-        chunkId,
+        triggerTaskId: linkConfig.triggerTaskId,
+        linkedTaskId: taskId,
+        delayMinutes: linkConfig.delayMinutes,
+        createdAt: now,
+      }
+      addTaskLink(link)
+    } else {
+      // For regular tasks: create instance for the selected date
+      const instanceId = uuidv4()
+      const instance: TaskInstance = {
+        id: instanceId,
+        taskId,
+        date,
         completed: false,
         completedAt: null,
       }
-      addChunkInstance(chunkInstance)
-    })
+      addTaskInstance(instance)
+
+      // Create chunk instances for this task instance
+      const taskChunks = [...chunks]
+      const allTasks = useKalendarStore.getState().tasks
+      const chunkTasks = allTasks.filter((t) => t.parentId === taskId)
+
+      chunkTasks.forEach((chunk) => {
+        const chunkInstance: ChunkInstance = {
+          id: uuidv4(),
+          taskInstanceId: instanceId,
+          chunkId: chunk.id,
+          completed: false,
+          completedAt: null,
+        }
+        addChunkInstance(chunkInstance)
+      })
+    }
 
     onSuccess()
   }
@@ -129,6 +168,17 @@ export function CreateTaskForm({ date, onSuccess }: CreateTaskFormProps) {
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Enter task title"
           autoFocus
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="description">Description (optional)</Label>
+        <textarea
+          id="description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Add details about this task"
+          className="w-full min-h-[60px] px-3 py-2 text-sm rounded-md border border-input bg-background resize-y"
         />
       </div>
 
@@ -151,42 +201,55 @@ export function CreateTaskForm({ date, onSuccess }: CreateTaskFormProps) {
       </div>
 
       <div className="space-y-2">
-        <Label>Schedules</Label>
-        <div className="space-y-2">
-          {schedules.map((schedule) => (
-            <div key={schedule.id} className="flex items-center gap-2">
-              <Checkbox
-                id={schedule.id}
-                checked={selectedScheduleIds.includes(schedule.id)}
-                onCheckedChange={(checked) =>
-                  handleScheduleToggle(schedule.id, checked as boolean)
-                }
-              />
-              <Label htmlFor={schedule.id} className="font-normal">
-                {schedule.name} ({schedule.startTime} - {schedule.endTime})
-              </Label>
-            </div>
-          ))}
-        </div>
+        <Label>Trigger After</Label>
+        <TaskLinkSelector
+          value={linkConfig}
+          availableTasks={availableTasks}
+          onChange={handleLinkConfigChange}
+        />
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="recurrence">Recurrence</Label>
-        <Select
-          value={recurrence}
-          onValueChange={(v) => setRecurrence(v as Recurrence)}
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">None</SelectItem>
-            <SelectItem value="daily">Daily</SelectItem>
-            <SelectItem value="weekly">Weekly</SelectItem>
-            <SelectItem value="monthly">Monthly</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      {!linkConfig && (
+        <>
+          <div className="space-y-2">
+            <Label>Schedules</Label>
+            <div className="space-y-2">
+              {schedules.map((schedule) => (
+                <div key={schedule.id} className="flex items-center gap-2">
+                  <Checkbox
+                    id={schedule.id}
+                    checked={selectedScheduleIds.includes(schedule.id)}
+                    onCheckedChange={(checked) =>
+                      handleScheduleToggle(schedule.id, checked as boolean)
+                    }
+                  />
+                  <Label htmlFor={schedule.id} className="font-normal">
+                    {schedule.name} ({schedule.startTime} - {schedule.endTime})
+                  </Label>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="recurrence">Recurrence</Label>
+            <Select
+              value={recurrence}
+              onValueChange={(v) => setRecurrence(v as Recurrence)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                <SelectItem value="daily">Daily</SelectItem>
+                <SelectItem value="weekly">Weekly</SelectItem>
+                <SelectItem value="monthly">Monthly</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </>
+      )}
 
       <div className="space-y-2">
         <Label>Sub-tasks (Chunks)</Label>
@@ -229,7 +292,7 @@ export function CreateTaskForm({ date, onSuccess }: CreateTaskFormProps) {
       </div>
 
       <div className="flex justify-end gap-2 pt-4">
-        <Button type="submit" disabled={!title.trim() || selectedScheduleIds.length === 0}>
+        <Button type="submit" disabled={!title.trim() || (!linkConfig && selectedScheduleIds.length === 0)}>
           Create Task
         </Button>
       </div>
