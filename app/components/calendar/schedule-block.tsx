@@ -28,8 +28,8 @@ export function ScheduleBlock({
   const endMinutes = timeToMinutes(schedule.endTime)
   const durationMinutes = endMinutes - startMinutes
 
-  // Calculate position (6 AM is the start)
-  const topOffset = ((startMinutes - 6 * 60) / 60) * hourHeight
+  // Calculate position (midnight is the start)
+  const topOffset = (startMinutes / 60) * hourHeight
   const height = (durationMinutes / 60) * hourHeight
 
   return (
@@ -47,7 +47,9 @@ export function ScheduleBlock({
       </div>
       <div className="space-y-1">
         {tasks.map((task) => {
-          const instance = taskInstances.find((ti) => ti.taskId === task.id)
+          // Prefer instance with startTime (for linked tasks that may have duplicate instances)
+          const instance = taskInstances.find((ti) => ti.taskId === task.id && ti.startTime)
+            || taskInstances.find((ti) => ti.taskId === task.id)
           const chunks = allTasks.filter((t) => t.parentId === task.id)
           // Filter chunk instances by task instance ID to get the right ones for this date
           const taskChunkInstances = instance

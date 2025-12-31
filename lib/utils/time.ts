@@ -16,8 +16,8 @@ export function timeToMinutes(time: string): number {
 }
 
 export function getTimelineHours(): number[] {
-  // 6 AM to 11 PM
-  return Array.from({ length: 18 }, (_, i) => i + 6)
+  // Midnight to 11 PM (full 24 hours)
+  return Array.from({ length: 24 }, (_, i) => i)
 }
 
 export function formatDate(date: Date): string {
@@ -31,4 +31,25 @@ export function formatDisplayDate(date: Date): string {
     day: 'numeric',
     year: 'numeric',
   })
+}
+
+export function formatTimeDisplay(time: string): string {
+  const { hours, minutes } = parseTime(time)
+  const period = hours >= 12 ? 'PM' : 'AM'
+  const displayHours = hours % 12 || 12
+  return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`
+}
+
+export function calculateLinkedTaskSchedule(
+  completedAt: string,
+  delayMinutes: number
+): { date: string; startTime: string } {
+  const completedDate = new Date(completedAt)
+  const scheduledDate = new Date(completedDate.getTime() + delayMinutes * 60 * 1000)
+
+  const date = scheduledDate.toISOString().split('T')[0]
+  const hours = scheduledDate.getHours().toString().padStart(2, '0')
+  const minutes = scheduledDate.getMinutes().toString().padStart(2, '0')
+
+  return { date, startTime: `${hours}:${minutes}` }
 }

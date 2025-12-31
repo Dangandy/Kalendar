@@ -31,7 +31,7 @@ export function Timeline({ children }: TimelineProps) {
           <div
             key={hour}
             className="absolute w-full border-t border-muted"
-            style={{ top: `${(hour - 6) * hourHeight}px` }}
+            style={{ top: `${hour * hourHeight}px` }}
           />
         ))}
 
