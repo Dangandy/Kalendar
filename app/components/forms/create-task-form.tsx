@@ -36,6 +36,7 @@ export function CreateTaskForm({ date, onSuccess }: CreateTaskFormProps) {
     triggerTaskId: string
     delayMinutes: number
   } | null>(null)
+  const [startTime, setStartTime] = useState<string>('')
 
   // Only show top-level tasks (not chunks) as linkable
   const availableTasks = tasks.filter((t) => t.parentId === null)
@@ -90,7 +91,7 @@ export function CreateTaskForm({ date, onSuccess }: CreateTaskFormProps) {
       recurrence,
       recurrenceEnd: null,
       parentId: null,
-      startTime: null, // Will add UI in next task
+      startTime: startTime || null,
       createdAt: now,
       updatedAt: now,
     }
@@ -198,6 +199,17 @@ export function CreateTaskForm({ date, onSuccess }: CreateTaskFormProps) {
             <SelectItem value="4">P4 - Low</SelectItem>
           </SelectContent>
         </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="startTime">Start Time (optional)</Label>
+        <Input
+          id="startTime"
+          type="time"
+          value={startTime}
+          onChange={(e) => setStartTime(e.target.value)}
+          className="w-full"
+        />
       </div>
 
       <div className="space-y-2">
