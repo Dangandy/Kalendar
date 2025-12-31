@@ -1,6 +1,7 @@
 'use client'
 
 import { getTimelineHours, formatTime } from '@/lib/utils/time'
+import { useState, useEffect } from 'react'
 
 interface TimelineProps {
   children: React.ReactNode
@@ -9,6 +10,28 @@ interface TimelineProps {
 export function Timeline({ children }: TimelineProps) {
   const hours = getTimelineHours()
   const hourHeight = 60 // pixels per hour
+
+  const [currentTime, setCurrentTime] = useState<Date | null>(null)
+
+  useEffect(() => {
+    // Set initial time on client only
+    setCurrentTime(new Date())
+
+    const interval = setInterval(() => {
+      setCurrentTime(new Date())
+    }, 60000) // Update every minute
+
+    return () => clearInterval(interval)
+  }, [])
+
+  const getCurrentTimePosition = () => {
+    if (!currentTime) return null
+    const hours = currentTime.getHours()
+    const minutes = currentTime.getMinutes()
+    return (hours + minutes / 60) * hourHeight
+  }
+
+  const timePosition = getCurrentTimePosition()
 
   return (
     <div className="flex flex-1 overflow-auto">
@@ -34,6 +57,19 @@ export function Timeline({ children }: TimelineProps) {
             style={{ top: `${hour * hourHeight}px` }}
           />
         ))}
+
+        {/* Current time indicator */}
+        {timePosition !== null && (
+          <div
+            className="absolute left-0 right-0 z-10 pointer-events-none"
+            style={{ top: `${timePosition}px` }}
+          >
+            <div className="relative">
+              <div className="absolute -left-2 w-3 h-3 rounded-full bg-red-500 -translate-y-1/2" />
+              <div className="h-0.5 bg-red-500 w-full" />
+            </div>
+          </div>
+        )}
 
         {/* Schedule blocks */}
         <div className="relative" style={{ height: `${hours.length * hourHeight}px` }}>
