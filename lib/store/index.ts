@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { Schedule, Task, TaskInstance, ChunkInstance, StorageMode } from './types'
+import { v4 as uuidv4 } from 'uuid'
+import type { Schedule, Task, TaskInstance, ChunkInstance, TaskLink, StorageMode } from './types'
+import { calculateLinkedTaskSchedule } from '@/lib/utils/time'
 
 interface KalendarState {
   // Storage mode
@@ -12,6 +14,7 @@ interface KalendarState {
   tasks: Task[]
   taskInstances: TaskInstance[]
   chunkInstances: ChunkInstance[]
+  taskLinks: TaskLink[]
 
   // Actions
   setStorageMode: (mode: StorageMode) => void
@@ -34,6 +37,10 @@ interface KalendarState {
   // Chunk instance actions
   addChunkInstance: (instance: ChunkInstance) => void
   toggleChunkInstance: (id: string) => void
+
+  // Task link actions
+  addTaskLink: (link: TaskLink) => void
+  deleteTaskLink: (id: string) => void
 }
 
 const DEFAULT_SCHEDULES: Schedule[] = [
@@ -82,6 +89,7 @@ export const useKalendarStore = create<KalendarState>()(
       tasks: [],
       taskInstances: [],
       chunkInstances: [],
+      taskLinks: [],
 
       // Storage mode actions
       setStorageMode: (mode) => set({ storageMode: mode }),
@@ -112,25 +120,85 @@ export const useKalendarStore = create<KalendarState>()(
         })),
       deleteTask: (id) =>
         set((state) => ({
-          // Delete task and its chunks
+          // Delete task, its chunks, and associated links
           tasks: state.tasks.filter((t) => t.id !== id && t.parentId !== id),
+          taskLinks: state.taskLinks.filter(
+            (l) => l.triggerTaskId !== id && l.linkedTaskId !== id
+          ),
         })),
 
       // Task instance actions
       addTaskInstance: (instance) =>
         set((state) => ({ taskInstances: [...state.taskInstances, instance] })),
       toggleTaskInstance: (id) =>
-        set((state) => ({
-          taskInstances: state.taskInstances.map((ti) =>
+        set((state) => {
+          const instance = state.taskInstances.find((ti) => ti.id === id)
+          if (!instance) return state
+
+          const isCompleting = !instance.completed
+          const completedAt = isCompleting ? new Date().toISOString() : null
+
+          const updatedInstances = state.taskInstances.map((ti) =>
             ti.id === id
-              ? {
-                  ...ti,
-                  completed: !ti.completed,
-                  completedAt: !ti.completed ? new Date().toISOString() : null,
-                }
+              ? { ...ti, completed: isCompleting, completedAt }
               : ti
-          ),
-        })),
+          )
+
+          const newInstances: TaskInstance[] = []
+          const newChunkInstances: ChunkInstance[] = []
+
+          // If completing, create linked task instances
+          if (isCompleting && completedAt) {
+            const links = state.taskLinks.filter(
+              (link) => link.triggerTaskId === instance.taskId
+            )
+
+            links.forEach((link) => {
+              const { date, startTime } = calculateLinkedTaskSchedule(
+                completedAt,
+                link.delayMinutes
+              )
+
+              // Check if already exists
+              const exists = updatedInstances.some(
+                (ti) =>
+                  ti.taskId === link.linkedTaskId &&
+                  ti.date === date &&
+                  ti.triggeredByLinkId === link.id
+              )
+
+              if (!exists) {
+                const newInstanceId = uuidv4()
+                newInstances.push({
+                  id: newInstanceId,
+                  taskId: link.linkedTaskId,
+                  date,
+                  completed: false,
+                  completedAt: null,
+                  startTime,
+                  triggeredByLinkId: link.id,
+                })
+
+                // Also create chunk instances for this linked task
+                const chunks = state.tasks.filter((t) => t.parentId === link.linkedTaskId)
+                chunks.forEach((chunk) => {
+                  newChunkInstances.push({
+                    id: uuidv4(),
+                    taskInstanceId: newInstanceId,
+                    chunkId: chunk.id,
+                    completed: false,
+                    completedAt: null,
+                  })
+                })
+              }
+            })
+          }
+
+          return {
+            taskInstances: [...updatedInstances, ...newInstances],
+            chunkInstances: [...state.chunkInstances, ...newChunkInstances],
+          }
+        }),
 
       // Chunk instance actions
       addChunkInstance: (instance) =>
@@ -146,6 +214,14 @@ export const useKalendarStore = create<KalendarState>()(
                 }
               : ci
           ),
+        })),
+
+      // Task link actions
+      addTaskLink: (link) =>
+        set((state) => ({ taskLinks: [...state.taskLinks, link] })),
+      deleteTaskLink: (id) =>
+        set((state) => ({
+          taskLinks: state.taskLinks.filter((l) => l.id !== id),
         })),
     }),
     {

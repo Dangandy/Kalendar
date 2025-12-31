@@ -36,7 +36,7 @@ export function CreateTaskForm({ date, onSuccess }: CreateTaskFormProps) {
     triggerTaskId: string
     delayMinutes: number
   } | null>(null)
-  const [startTime, setStartTime] = useState<string>('')
+  const [startDate, setStartDate] = useState<string>('')
 
   // Only show top-level tasks (not chunks) as linkable
   const availableTasks = tasks.filter((t) => t.parentId === null)
@@ -91,7 +91,7 @@ export function CreateTaskForm({ date, onSuccess }: CreateTaskFormProps) {
       recurrence,
       recurrenceEnd: null,
       parentId: null,
-      startTime: startTime || null,
+      startDate: startDate || null,
       createdAt: now,
       updatedAt: now,
     }
@@ -110,7 +110,7 @@ export function CreateTaskForm({ date, onSuccess }: CreateTaskFormProps) {
         recurrence: 'none',
         recurrenceEnd: null,
         parentId: taskId,
-        startTime: null,
+        startDate: null,
         createdAt: now,
         updatedAt: now,
       }
@@ -202,12 +202,12 @@ export function CreateTaskForm({ date, onSuccess }: CreateTaskFormProps) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="startTime">Start Time (optional)</Label>
+        <Label htmlFor="startDate">Start Date (optional)</Label>
         <Input
-          id="startTime"
-          type="time"
-          value={startTime}
-          onChange={(e) => setStartTime(e.target.value)}
+          id="startDate"
+          type="date"
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
           className="w-full"
         />
       </div>

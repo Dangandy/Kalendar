@@ -64,9 +64,14 @@ export function TaskItem({
           )}
         >
           {task.title}
-          {(instance?.startTime || task.startTime) && (
+          {instance?.startTime && (
             <span className="ml-2 text-xs text-muted-foreground">
-              @ {formatTimeDisplay(instance?.startTime || task.startTime!)}
+              @ {formatTimeDisplay(instance.startTime)}
+            </span>
+          )}
+          {task.startDate && (
+            <span className="ml-2 text-xs text-muted-foreground">
+              starts {task.startDate}
             </span>
           )}
         </span>

@@ -25,7 +25,7 @@ export interface Task {
   recurrence: Recurrence
   recurrenceEnd: string | null // ISO date
   parentId: string | null // null for top-level tasks, task id for chunks
-  startTime: string | null // HH:MM format - scheduled start time
+  startDate: string | null // YYYY-MM-DD format - scheduled start date
   createdAt: string
   updatedAt: string
 }
