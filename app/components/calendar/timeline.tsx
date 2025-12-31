@@ -77,8 +77,8 @@ export function Timeline({ children }: TimelineProps) {
             style={{ top: `${timePosition}px` }}
           >
             <div className="relative">
-              <div className="absolute -left-2 w-3 h-3 rounded-full bg-red-500 -translate-y-1/2" />
-              <div className="h-0.5 bg-red-500 w-full" />
+              <div className="absolute -left-2 w-3 h-3 rounded-full bg-red-500 -translate-y-1/2 ring-2 ring-white" />
+              <div className="h-0.5 bg-red-500 w-full shadow-[0_0_0_1px_white]" />
             </div>
           </div>
         )}
