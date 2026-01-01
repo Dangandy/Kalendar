@@ -74,6 +74,11 @@ export function TaskItem({
               starts {task.startDate}
             </span>
           )}
+          {task.scheduleIds.length > 1 && (
+            <span className="ml-2 text-xs text-muted-foreground">
+              ({task.scheduleIds.length} schedules)
+            </span>
+          )}
         </span>
         <Badge
           variant="secondary"
