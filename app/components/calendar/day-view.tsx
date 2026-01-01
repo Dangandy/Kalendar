@@ -8,7 +8,7 @@ import { ScheduleBlock } from './schedule-block'
 import { CreateTaskDialog } from '../forms/create-task-dialog'
 import { useKalendarStore } from '@/lib/store'
 import { formatDate, formatDisplayDate, timeToMinutes } from '@/lib/utils/time'
-import { getTasksForSchedule } from '@/lib/utils/tasks'
+import { getTasksForSchedule, getActiveScheduleForTask } from '@/lib/utils/tasks'
 import { ensureTaskInstancesForDate } from '@/lib/utils/recurrence'
 
 export function DayView() {
@@ -59,6 +59,11 @@ export function DayView() {
     setCurrentDate(new Date())
   }
 
+  const getCurrentTime = (): string => {
+    const now = new Date()
+    return `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
+  }
+
   // Sort schedules by start time
   const sortedSchedules = [...schedules].sort((a, b) =>
     a.startTime.localeCompare(b.startTime)
@@ -76,6 +81,8 @@ export function DayView() {
   const getScheduleTasks = (scheduleId: string) => {
     const schedule = sortedSchedules.find((s) => s.id === scheduleId)
     if (!schedule) return []
+
+    const currentTime = getCurrentTime()
 
     // Get regular tasks assigned to this schedule
     const scheduleTasks = getTasksForSchedule(tasks, scheduleId)
@@ -121,6 +128,14 @@ export function DayView() {
           sortedSchedules.some((s) => s.id === sid)
         )
         return scheduleId === firstScheduleId
+      }
+
+      // For multi-schedule tasks, only show in the active schedule (cascading logic)
+      if (task.scheduleIds.length > 1) {
+        const activeScheduleId = getActiveScheduleForTask(task, sortedSchedules, currentTime)
+        if (scheduleId !== activeScheduleId) {
+          return false
+        }
       }
 
       return true
