@@ -83,6 +83,8 @@ export function DayView() {
     if (!schedule) return []
 
     const currentTime = getCurrentTime()
+    const today = formatDate(new Date())
+    const isToday = dateStr === today
 
     // Get regular tasks assigned to this schedule
     const scheduleTasks = getTasksForSchedule(tasks, scheduleId)
@@ -130,11 +132,22 @@ export function DayView() {
         return scheduleId === firstScheduleId
       }
 
-      // For multi-schedule tasks, only show in the active schedule (cascading logic)
+      // For multi-schedule tasks, apply cascading logic only for today
       if (task.scheduleIds.length > 1) {
-        const activeScheduleId = getActiveScheduleForTask(task, sortedSchedules, currentTime)
-        if (scheduleId !== activeScheduleId) {
-          return false
+        if (isToday) {
+          // Today: show in active schedule based on current time
+          const activeScheduleId = getActiveScheduleForTask(task, sortedSchedules, currentTime)
+          if (scheduleId !== activeScheduleId) {
+            return false
+          }
+        } else {
+          // Past/Future days: show in first schedule only
+          const firstScheduleId = task.scheduleIds.find((sid) =>
+            sortedSchedules.some((s) => s.id === sid)
+          )
+          if (scheduleId !== firstScheduleId) {
+            return false
+          }
         }
       }
 
