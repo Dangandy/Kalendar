@@ -1,4 +1,5 @@
-import type { Task, TaskInstance, ChunkInstance } from '@/lib/store/types'
+import type { Task, TaskInstance, ChunkInstance, Schedule } from '@/lib/store/types'
+import { timeToMinutes } from './time'
 
 export function getTasksForSchedule(
   tasks: Task[],
@@ -72,4 +73,42 @@ export function isTaskCompletedInAnySchedule(
     (ti) => ti.taskId === task.id && ti.date === date
   )
   return instance?.completed ?? false
+}
+
+/**
+ * Determines which schedule a task should appear in based on current time.
+ * Schedules act as fallback time slots - the task appears in the first schedule
+ * where the current time hasn't passed the schedule's end time.
+ *
+ * @param task - The task to check
+ * @param schedules - All available schedules (sorted by startTime)
+ * @param currentTime - Current time in HH:MM format
+ * @returns The schedule ID where the task should appear, or null if no schedules
+ */
+export function getActiveScheduleForTask(
+  task: Task,
+  schedules: Schedule[],
+  currentTime: string
+): string | null {
+  if (task.scheduleIds.length === 0) return null
+
+  const currentMinutes = timeToMinutes(currentTime)
+
+  // Sort schedules by start time and filter to only those the task is assigned to
+  const taskSchedules = schedules
+    .filter((s) => task.scheduleIds.includes(s.id))
+    .sort((a, b) => a.startTime.localeCompare(b.startTime))
+
+  if (taskSchedules.length === 0) return null
+
+  // Find the first schedule that hasn't ended yet
+  for (const schedule of taskSchedules) {
+    const endMinutes = timeToMinutes(schedule.endTime)
+    if (currentMinutes < endMinutes) {
+      return schedule.id
+    }
+  }
+
+  // All schedules have passed - return the last one (overdue)
+  return taskSchedules[taskSchedules.length - 1].id
 }
