@@ -16,6 +16,7 @@ import {
 import { useKalendarStore } from '@/lib/store'
 import { TaskLinkSelector } from './task-link-selector'
 import type { Priority, Recurrence, Task, TaskInstance, TaskLink, ChunkInstance } from '@/lib/store/types'
+import { getSmartScheduleForTask, getCurrentTimeMinutes } from '@/lib/utils/smart-scheduling'
 
 interface CreateTaskFormProps {
   date: string
@@ -131,19 +132,29 @@ export function CreateTaskForm({ date, onSuccess }: CreateTaskFormProps) {
       }
       addTaskLink(link)
     } else {
-      // For regular tasks: create instance for the selected date
+      // For regular tasks: create instance with smart scheduling
       const instanceId = uuidv4()
+
+      // Get smart schedule position
+      const smartSchedule = getSmartScheduleForTask(
+        task,
+        schedules,
+        useKalendarStore.getState().taskInstances,
+        date,
+        getCurrentTimeMinutes()
+      )
+
       const instance: TaskInstance = {
         id: instanceId,
         taskId,
         date,
         completed: false,
         completedAt: null,
+        startTime: smartSchedule?.startTime || null,
       }
       addTaskInstance(instance)
 
       // Create chunk instances for this task instance
-      const taskChunks = [...chunks]
       const allTasks = useKalendarStore.getState().tasks
       const chunkTasks = allTasks.filter((t) => t.parentId === taskId)
 
