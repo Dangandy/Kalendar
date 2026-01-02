@@ -120,12 +120,14 @@ export function DayView() {
 
       if (!instance) return false
 
-      // If completed, only show in first schedule (or the schedule matching startTime)
+      // For linked tasks (with startTime), always show in the schedule matching their startTime
+      // This takes priority over both completion status and cascading logic
+      if (instance.startTime) {
+        return isTimeInSchedule(instance.startTime, schedule)
+      }
+
+      // If completed (non-linked), only show in first schedule
       if (instance.completed) {
-        if (instance.startTime) {
-          // For linked tasks, show in the schedule matching their startTime
-          return isTimeInSchedule(instance.startTime, schedule)
-        }
         const firstScheduleId = task.scheduleIds.find((sid) =>
           sortedSchedules.some((s) => s.id === sid)
         )
