@@ -37,6 +37,7 @@ export function CreateTaskForm({ date, onSuccess }: CreateTaskFormProps) {
     delayMinutes: number
   } | null>(null)
   const [startDate, setStartDate] = useState<string>('')
+  const [duration, setDuration] = useState<number>(30)
 
   // Only show top-level tasks (not chunks) as linkable
   const availableTasks = tasks.filter((t) => t.parentId === null)
@@ -92,6 +93,7 @@ export function CreateTaskForm({ date, onSuccess }: CreateTaskFormProps) {
       recurrenceEnd: null,
       parentId: null,
       startDate: startDate || null,
+      duration,
       createdAt: now,
       updatedAt: now,
     }
@@ -208,6 +210,20 @@ export function CreateTaskForm({ date, onSuccess }: CreateTaskFormProps) {
           type="date"
           value={startDate}
           onChange={(e) => setStartDate(e.target.value)}
+          className="w-full"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="duration">Duration (minutes)</Label>
+        <Input
+          id="duration"
+          type="number"
+          min={5}
+          max={480}
+          step={5}
+          value={duration}
+          onChange={(e) => setDuration(Math.max(5, parseInt(e.target.value) || 30))}
           className="w-full"
         />
       </div>
