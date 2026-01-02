@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { v4 as uuidv4 } from 'uuid'
 import type { Schedule, Task, TaskInstance, ChunkInstance, TaskLink, StorageMode } from './types'
-import { calculateLinkedTaskSchedule } from '@/lib/utils/time'
+import { getSmartScheduleForTask } from '@/lib/utils/smart-scheduling'
 
 interface KalendarState {
   // Storage mode
@@ -149,26 +149,70 @@ export const useKalendarStore = create<KalendarState>()(
 
           // If completing, create linked task instances
           if (isCompleting && completedAt) {
+            const triggerTask = state.tasks.find((t) => t.id === instance.taskId)
+            console.log('[TaskLink] Completing task:', triggerTask?.title, '| ID:', instance.taskId)
+
             const links = state.taskLinks.filter(
               (link) => link.triggerTaskId === instance.taskId
             )
+            console.log('[TaskLink] Found links:', links.length, links.map((l) => ({
+              linkId: l.id,
+              linkedTaskId: l.linkedTaskId,
+              delayMinutes: l.delayMinutes,
+            })))
 
             links.forEach((link) => {
-              const { date, startTime } = calculateLinkedTaskSchedule(
-                completedAt,
-                link.delayMinutes
+              const linkedTask = state.tasks.find((t) => t.id === link.linkedTaskId)
+              if (!linkedTask) return
+
+              // Use smart scheduling instead of simple delay calculation
+              const delayMinutes = link.delayMinutes
+
+              // Get target date/time (current time + delay)
+              const now = new Date()
+              const delayedDate = new Date(now.getTime() + delayMinutes * 60 * 1000)
+              const year = delayedDate.getFullYear()
+              const month = (delayedDate.getMonth() + 1).toString().padStart(2, '0')
+              const day = delayedDate.getDate().toString().padStart(2, '0')
+              const date = `${year}-${month}-${day}`
+
+              // Calculate time in minutes for that day
+              const targetTimeMinutes = delayedDate.getHours() * 60 + delayedDate.getMinutes()
+
+              // Get smart schedule position starting from delay time
+              const smartSchedule = getSmartScheduleForTask(
+                linkedTask,
+                state.schedules,
+                updatedInstances,
+                date,
+                targetTimeMinutes
               )
 
+              const startTime = smartSchedule?.startTime ||
+                `${delayedDate.getHours().toString().padStart(2, '0')}:${delayedDate.getMinutes().toString().padStart(2, '0')}`
+
+              console.log('[TaskLink] Processing link to:', linkedTask.title, '| Scheduled for:', date, startTime)
+
               // Check if already exists
-              const exists = updatedInstances.some(
+              const existingIndex = updatedInstances.findIndex(
                 (ti) =>
                   ti.taskId === link.linkedTaskId &&
                   ti.date === date &&
                   ti.triggeredByLinkId === link.id
               )
+              const exists = existingIndex !== -1
+              console.log('[TaskLink] Instance already exists?', exists)
 
-              if (!exists) {
+              if (exists) {
+                // Update existing instance with new startTime (in case it was wrong)
+                const existing = updatedInstances[existingIndex]
+                if (!existing.completed && existing.startTime !== startTime) {
+                  console.log('[TaskLink] Updating existing instance startTime from', existing.startTime, 'to', startTime)
+                  updatedInstances[existingIndex] = { ...existing, startTime }
+                }
+              } else {
                 const newInstanceId = uuidv4()
+                console.log('[TaskLink] Creating new instance:', { taskId: link.linkedTaskId, date, startTime, triggeredByLinkId: link.id })
                 newInstances.push({
                   id: newInstanceId,
                   taskId: link.linkedTaskId,
