@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { v4 as uuidv4 } from 'uuid'
 import type { Schedule, Task, TaskInstance, ChunkInstance, TaskLink, StorageMode } from './types'
-import { getSmartScheduleForTask } from '@/lib/utils/smart-scheduling'
+import { getSmartScheduleForTask, getAvailableSlots, getCurrentTimeMinutes, minutesToTime } from '@/lib/utils/smart-scheduling'
 
 interface KalendarState {
   // Storage mode
@@ -41,6 +41,9 @@ interface KalendarState {
   // Task link actions
   addTaskLink: (link: TaskLink) => void
   deleteTaskLink: (id: string) => void
+
+  // Smart scheduling actions
+  rescheduleTasks: (date: string) => void
 }
 
 const DEFAULT_SCHEDULES: Schedule[] = [
@@ -267,6 +270,63 @@ export const useKalendarStore = create<KalendarState>()(
         set((state) => ({
           taskLinks: state.taskLinks.filter((l) => l.id !== id),
         })),
+
+      // Smart scheduling action
+      rescheduleTasks: (date) =>
+        set((state) => {
+          const currentTimeMinutes = getCurrentTimeMinutes()
+
+          // Get uncompleted task instances for this date
+          const uncompletedInstances = state.taskInstances.filter(
+            (ti) => ti.date === date && !ti.completed
+          )
+
+          // Get corresponding tasks
+          const tasksToSchedule = uncompletedInstances
+            .map((ti) => state.tasks.find((t) => t.id === ti.taskId))
+            .filter((t): t is Task => t !== undefined && t.parentId === null)
+
+          // Sort by priority
+          tasksToSchedule.sort((a, b) => a.priority - b.priority)
+
+          // Get available slots
+          const slots = getAvailableSlots(state.schedules, currentTimeMinutes)
+          if (slots.length === 0) return state
+
+          // Track slot usage
+          const slotUsage = slots.map((s) => ({
+            ...s,
+            currentStart: s.startMinutes,
+            remaining: s.availableMinutes,
+          }))
+
+          const updatedInstances = state.taskInstances.map((ti) => {
+            if (ti.date !== date || ti.completed) return ti
+
+            const task = tasksToSchedule.find((t) => t.id === ti.taskId)
+            if (!task) return ti
+
+            const duration = task.duration || 30
+
+            // Find slot that can fit this task
+            for (const slot of slotUsage) {
+              if (slot.remaining >= duration) {
+                const newStartTime = minutesToTime(slot.currentStart)
+
+                // Update slot
+                slot.currentStart += duration
+                slot.remaining -= duration
+
+                return { ...ti, startTime: newStartTime }
+              }
+            }
+
+            // No slot found, keep original (or null)
+            return ti
+          })
+
+          return { taskInstances: updatedInstances }
+        }),
     }),
     {
       name: 'kalendar-storage',
