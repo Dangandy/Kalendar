@@ -113,6 +113,7 @@ export function CreateTaskForm({ date, onSuccess }: CreateTaskFormProps) {
         recurrenceEnd: null,
         parentId: taskId,
         startDate: null,
+        duration: 15,
         createdAt: now,
         updatedAt: now,
       }
