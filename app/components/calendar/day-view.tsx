@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Timeline } from './timeline'
 import { ScheduleBlock } from './schedule-block'
@@ -23,6 +23,7 @@ export function DayView() {
     toggleChunkInstance,
     addTaskInstance,
     addChunkInstance,
+    rescheduleTasks,
   } = useKalendarStore()
 
   const dateStr = formatDate(currentDate)
@@ -57,6 +58,10 @@ export function DayView() {
 
   const goToToday = () => {
     setCurrentDate(new Date())
+  }
+
+  const handleReschedule = () => {
+    rescheduleTasks(dateStr)
   }
 
   const getCurrentTime = (): string => {
@@ -104,7 +109,9 @@ export function DayView() {
       if (scheduleTasks.some((t) => t.id === task.id)) return false
 
       // Check if the startTime falls within this schedule
-      return isTimeInSchedule(instance.startTime!, schedule)
+      const inSchedule = isTimeInSchedule(instance.startTime!, schedule)
+      console.log('[DayView] Linked task candidate:', task.title, '| startTime:', instance.startTime, '| schedule:', schedule.name, '| inSchedule:', inSchedule, '| completed:', instance.completed)
+      return inSchedule
     })
 
     const allTasks = [...scheduleTasks, ...linkedTasks]
@@ -170,6 +177,14 @@ export function DayView() {
           </Button>
           <Button variant="outline" onClick={goToToday}>
             Today
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleReschedule}
+            title="Reschedule tasks to current time"
+          >
+            <RefreshCw className="h-4 w-4" />
           </Button>
         </div>
         <h2 className="text-xl font-semibold">
