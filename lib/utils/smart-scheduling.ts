@@ -28,14 +28,23 @@ export function minutesToTime(minutes: number): string {
 /**
  * Get available schedule slots starting from current time
  * Returns slots in chronological order with available time
+ * @param schedules - All available schedules
+ * @param currentTimeMinutes - Current time in minutes from midnight
+ * @param allowedScheduleIds - Optional filter: only include these schedule IDs
  */
 export function getAvailableSlots(
   schedules: Schedule[],
-  currentTimeMinutes: number
+  currentTimeMinutes: number,
+  allowedScheduleIds?: string[]
 ): ScheduleSlot[] {
   const slots: ScheduleSlot[] = []
 
-  const sortedSchedules = [...schedules].sort((a, b) =>
+  // Filter schedules if allowedScheduleIds provided
+  const filteredSchedules = allowedScheduleIds
+    ? schedules.filter(s => allowedScheduleIds.includes(s.id))
+    : schedules
+
+  const sortedSchedules = [...filteredSchedules].sort((a, b) =>
     a.startTime.localeCompare(b.startTime)
   )
 
