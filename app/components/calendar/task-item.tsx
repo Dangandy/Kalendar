@@ -25,6 +25,18 @@ const priorityColors: Record<number, string> = {
   4: 'bg-gray-400',
 }
 
+function formatDuration(minutes: number): string {
+  if (minutes < 60) {
+    return `${minutes}m`
+  }
+  const hours = Math.floor(minutes / 60)
+  const mins = minutes % 60
+  if (mins === 0) {
+    return `${hours}h`
+  }
+  return `${hours}h ${mins}m`
+}
+
 export function TaskItem({
   task,
   instance,
@@ -86,6 +98,9 @@ export function TaskItem({
         >
           P{task.priority}
         </Badge>
+        <span className="text-xs text-muted-foreground">
+          {formatDuration(task.duration || 30)}
+        </span>
       </div>
 
       {task.description && (

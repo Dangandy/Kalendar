@@ -19,6 +19,7 @@ describe('getActiveScheduleForTask', () => {
     recurrenceEnd: null,
     parentId: null,
     startDate: null,
+    duration: 30,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   })
