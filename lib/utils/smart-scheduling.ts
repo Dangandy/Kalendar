@@ -139,8 +139,8 @@ export function getSmartScheduleForTask(
   date: string,
   currentTimeMinutes: number
 ): { scheduleId: string; startTime: string } | null {
-  // Get available slots
-  const slots = getAvailableSlots(schedules, currentTimeMinutes)
+  // Get available slots (filtered to task's assigned schedules)
+  const slots = getAvailableSlots(schedules, currentTimeMinutes, task.scheduleIds)
   if (slots.length === 0) return null
 
   // Calculate already occupied time in each slot

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { getAvailableSlots } from '../smart-scheduling'
-import type { Schedule } from '@/lib/store/types'
+import { getAvailableSlots, getSmartScheduleForTask } from '../smart-scheduling'
+import type { Schedule, Task } from '@/lib/store/types'
 
 const mockSchedules: Schedule[] = [
   {
@@ -67,5 +67,73 @@ describe('getAvailableSlots', () => {
     const slots = getAvailableSlots(mockSchedules, 840, ['morning'])
 
     expect(slots).toHaveLength(0)
+  })
+})
+
+describe('getSmartScheduleForTask', () => {
+  const createTask = (overrides: Partial<Task> = {}): Task => ({
+    id: 'task-1',
+    name: 'Test Task',
+    scheduleIds: ['morning'],
+    priority: 1,
+    duration: 30,
+    parentId: null,
+    recurrence: 'none',
+    recurrenceEnd: null,
+    createdAt: '2024-01-01',
+    updatedAt: '2024-01-01',
+    ...overrides,
+  })
+
+  it('only schedules into task assigned schedules', () => {
+    // Task assigned only to morning
+    const task = createTask({ scheduleIds: ['morning'] })
+
+    // At 2:00 PM (840 minutes) - morning has ended
+    const result = getSmartScheduleForTask(
+      task,
+      mockSchedules,
+      [],
+      '2024-01-15',
+      840
+    )
+
+    // Should return null because morning has ended, NOT schedule into afternoon
+    expect(result).toBeNull()
+  })
+
+  it('schedules into first available assigned schedule', () => {
+    // Task assigned to morning and evening (skipping afternoon)
+    const task = createTask({ scheduleIds: ['morning', 'evening'] })
+
+    // At 7:00 AM (420 minutes)
+    const result = getSmartScheduleForTask(
+      task,
+      mockSchedules,
+      [],
+      '2024-01-15',
+      420
+    )
+
+    expect(result).not.toBeNull()
+    expect(result!.scheduleId).toBe('morning')
+  })
+
+  it('falls back to later assigned schedule when earlier is full', () => {
+    // Task assigned to morning and evening
+    const task = createTask({ scheduleIds: ['morning', 'evening'], duration: 30 })
+
+    // At 11:50 AM (710 minutes) - only 10 mins left in morning, need 30
+    const result = getSmartScheduleForTask(
+      task,
+      mockSchedules,
+      [],
+      '2024-01-15',
+      710
+    )
+
+    // Should schedule into evening, not afternoon (which isn't assigned)
+    expect(result).not.toBeNull()
+    expect(result!.scheduleId).toBe('evening')
   })
 })
