@@ -330,6 +330,20 @@ export const useKalendarStore = create<KalendarState>()(
     }),
     {
       name: 'kalendar-storage',
+      version: 1,
+      migrate: (persistedState: unknown, version: number) => {
+        const state = persistedState as KalendarState
+
+        // Add default duration to tasks that don't have it
+        if (state.tasks) {
+          state.tasks = state.tasks.map((task) => ({
+            ...task,
+            duration: task.duration ?? 30,
+          }))
+        }
+
+        return state
+      },
     }
   )
 )
