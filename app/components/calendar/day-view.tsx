@@ -109,9 +109,7 @@ export function DayView() {
       if (scheduleTasks.some((t) => t.id === task.id)) return false
 
       // Check if the startTime falls within this schedule
-      const inSchedule = isTimeInSchedule(instance.startTime!, schedule)
-      console.log('[DayView] Linked task candidate:', task.title, '| startTime:', instance.startTime, '| schedule:', schedule.name, '| inSchedule:', inSchedule, '| completed:', instance.completed)
-      return inSchedule
+      return isTimeInSchedule(instance.startTime!, schedule)
     })
 
     const allTasks = [...scheduleTasks, ...linkedTasks]

@@ -47,7 +47,12 @@ export function calculateLinkedTaskSchedule(
   const completedDate = new Date(completedAt)
   const scheduledDate = new Date(completedDate.getTime() + delayMinutes * 60 * 1000)
 
-  const date = scheduledDate.toISOString().split('T')[0]
+  // Use local date, not UTC date
+  const year = scheduledDate.getFullYear()
+  const month = (scheduledDate.getMonth() + 1).toString().padStart(2, '0')
+  const day = scheduledDate.getDate().toString().padStart(2, '0')
+  const date = `${year}-${month}-${day}`
+
   const hours = scheduledDate.getHours().toString().padStart(2, '0')
   const minutes = scheduledDate.getMinutes().toString().padStart(2, '0')
 

@@ -152,17 +152,9 @@ export const useKalendarStore = create<KalendarState>()(
 
           // If completing, create linked task instances
           if (isCompleting && completedAt) {
-            const triggerTask = state.tasks.find((t) => t.id === instance.taskId)
-            console.log('[TaskLink] Completing task:', triggerTask?.title, '| ID:', instance.taskId)
-
             const links = state.taskLinks.filter(
               (link) => link.triggerTaskId === instance.taskId
             )
-            console.log('[TaskLink] Found links:', links.length, links.map((l) => ({
-              linkId: l.id,
-              linkedTaskId: l.linkedTaskId,
-              delayMinutes: l.delayMinutes,
-            })))
 
             links.forEach((link) => {
               const linkedTask = state.tasks.find((t) => t.id === link.linkedTaskId)
@@ -194,8 +186,6 @@ export const useKalendarStore = create<KalendarState>()(
               const startTime = smartSchedule?.startTime ||
                 `${delayedDate.getHours().toString().padStart(2, '0')}:${delayedDate.getMinutes().toString().padStart(2, '0')}`
 
-              console.log('[TaskLink] Processing link to:', linkedTask.title, '| Scheduled for:', date, startTime)
-
               // Check if already exists
               const existingIndex = updatedInstances.findIndex(
                 (ti) =>
@@ -204,18 +194,15 @@ export const useKalendarStore = create<KalendarState>()(
                   ti.triggeredByLinkId === link.id
               )
               const exists = existingIndex !== -1
-              console.log('[TaskLink] Instance already exists?', exists)
 
               if (exists) {
                 // Update existing instance with new startTime (in case it was wrong)
                 const existing = updatedInstances[existingIndex]
                 if (!existing.completed && existing.startTime !== startTime) {
-                  console.log('[TaskLink] Updating existing instance startTime from', existing.startTime, 'to', startTime)
                   updatedInstances[existingIndex] = { ...existing, startTime }
                 }
               } else {
                 const newInstanceId = uuidv4()
-                console.log('[TaskLink] Creating new instance:', { taskId: link.linkedTaskId, date, startTime, triggeredByLinkId: link.id })
                 newInstances.push({
                   id: newInstanceId,
                   taskId: link.linkedTaskId,
