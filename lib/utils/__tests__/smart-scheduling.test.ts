@@ -73,13 +73,15 @@ describe('getAvailableSlots', () => {
 describe('getSmartScheduleForTask', () => {
   const createTask = (overrides: Partial<Task> = {}): Task => ({
     id: 'task-1',
-    name: 'Test Task',
+    title: 'Test Task',
+    description: null,
     scheduleIds: ['morning'],
     priority: 1,
     duration: 30,
     parentId: null,
     recurrence: 'none',
     recurrenceEnd: null,
+    startDate: null,
     createdAt: '2024-01-01',
     updatedAt: '2024-01-01',
     ...overrides,
